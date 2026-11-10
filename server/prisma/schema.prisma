@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model Task {
+  id          Int            @id @default(autoincrement())
+  title       String
+  estimateMin Int
+  status      TaskStatus     @default(TODO)
+  createdAt   DateTime       @default(now())
+  sessions    FocusSession[]
+}
+
+model FocusSession {
+  id        Int       @id @default(autoincrement())
+  taskId    Int
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  startedAt DateTime
+  endedAt   DateTime?
+  pausedMs  Int       @default(0)
+  breaks    Break[]
+}
+
+model Break {
+  id        Int          @id @default(autoincrement())
+  sessionId Int
+  session   FocusSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  startedAt DateTime
+  endedAt   DateTime?
+}
+
+enum EventKind {
+  CLASS
+  MEETING
+  HABIT
+  OTHER
+}
+
+enum EventSource {
+  MANUAL
+  HABIT
+}
+
+model Event {
+  id          Int         @id @default(autoincrement())
+  title       String
+  kind        EventKind
+  dayOfWeek   Int?        // 0 = Sunday ... 6 = Saturday, for weekly events
+  date        DateTime?   @db.Date // for one-off events
+  startTime   String      // "HH:MM"
+  endTime     String      // "HH:MM"
+  source      EventSource @default(MANUAL)
+  habitPlanId Int?
+  habitPlan   HabitPlan?  @relation(fields: [habitPlanId], references: [id], onDelete: Cascade)
+}
+
+model HabitPlan {
+  id        Int      @id @default(autoincrement())
+  type      String
+  params    Json
+  startDate DateTime @db.Date
+  createdAt DateTime @default(now())
+  events    Event[]
+}
